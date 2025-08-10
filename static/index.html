@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+     <title>📔 Smart Reminder Notebook</title>
+     <style>
+          body {
+               font-family: 'Arial', sans-serif;
+               background: #f5f5f5;
+               max-width: 800px;
+               margin: 0 auto;
+               padding: 20px;
+          }
+
+          .notebook {
+               background: white;
+               border-radius: 10px;
+               box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+               padding: 20px;
+          }
+
+          .task-status {
+               display: flex;
+               margin-bottom: 20px;
+               border-bottom: 1px solid #eee;
+               padding-bottom: 10px;
+          }
+
+          .status-item {
+               padding: 10px 15px;
+               cursor: pointer;
+          }
+
+          .status-item.active {
+               border-bottom: 2px solid #4CAF50;
+               font-weight: bold;
+          }
+
+          .task-list {
+               min-height: 300px;
+          }
+
+          .task-card {
+               background: #f9f9f9;
+               border-left: 3px solid #4CAF50;
+               padding: 15px;
+               margin-bottom: 10px;
+               border-radius: 5px;
+               display: flex;
+               justify-content: space-between;
+          }
+
+          .task-actions {
+               display: flex;
+               align-items: center;
+          }
+
+          .radio-group {
+               margin-left: 15px;
+          }
+
+          .add-task {
+               margin-top: 20px;
+               display: flex;
+               gap: 10px;
+          }
+
+          input,
+          button {
+               padding: 10px;
+               border: 1px solid #ddd;
+               border-radius: 5px;
+          }
+
+          button {
+               background: #4CAF50;
+               color: white;
+               border: none;
+               cursor: pointer;
+          }
+     </style>
+</head>
+
+<body>
+     <div class="notebook">
+          <h1>📔 Smart Reminder Notebook</h1>
+
+          <div class="task-status">
+               <div class="status-item active" onclick="filterTasks('all')">All Tasks</div>
+               <div class="status-item" onclick="filterTasks('upcoming')">Upcoming</div>
+               <div class="status-item" onclick="filterTasks('ongoing')">Ongoing</div>
+               <div class="status-item" onclick="filterTasks('done')">Done</div>
+          </div>
+
+          <div class="task-list" id="taskList">
+               <!-- Tasks will appear here -->
+          </div>
+
+          <div class="add-task">
+               <input type="text" id="taskInput" placeholder="Enter new task...">
+               <input type="time" id="timeInput">
+               <button onclick="addTask()">Add Task</button>
+          </div>
+     </div>
+     <div class="notification-center">
+          <h3>🔔 Smart Notifications</h3>
+          <div id="notificationArea"></div>
+          <button onclick="sendRandomContent()">Get Random Fact/News</button>
+     </div>
+     
+     <style>
+          .notification-center {
+               background: white;
+               padding: 15px;
+               margin-top: 20px;
+               border-radius: 8px;
+               box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          }
+     
+          #notificationArea {
+               min-height: 50px;
+               margin: 10px 0;
+               padding: 10px;
+               border: 1px dashed #ddd;
+          }
+     </style>
+     
+     <script>
+          // Add these new functions
+          let notificationInterval;
+
+          function startSmartNotifications() {
+               // Check every 30 minutes (1800000ms)
+               notificationInterval = setInterval(() => {
+                    fetchRandomContent(true);
+               }, 1800000); // 30 minutes in milliseconds
+
+               // Initial fetch
+               fetchRandomContent(true);
+          }
+
+          function stopSmartNotifications() {
+               clearInterval(notificationInterval);
+          }
+
+          async function fetchRandomContent(showNotification = false) {
+               const response = await fetch('http://localhost:8000/get_random_content');
+               const content = await response.json();
+
+               const notificationArea = document.getElementById('notificationArea');
+               notificationArea.innerHTML = `
+             <div class="notification ${content.type}">
+                 <strong>${content.type.toUpperCase()}:</strong> ${content.content}
+             </div>
+         `;
+
+               if (showNotification && Notification.permission === "granted") {
+                    new Notification(`Did you know? (${content.type})`, {
+                         body: content.content,
+                         icon: content.type === 'fact' ? '📚' : '📰'
+                    });
+               }
+          }
+
+          function sendRandomContent() {
+               fetchRandomContent(true);
+          }
+
+          // Start notifications when page loads
+          window.onload = function () {
+               loadTasks();
+               startSmartNotifications();
+          };
+     </script>
+
+     <script>
+     // Notification permission
+     if (Notification.permission !== "granted") {
+          Notification.requestPermission();
+     }
+
+     // Load tasks on startup
+     window.onload = loadTasks;
+
+     async function loadTasks() {
+          const response = await fetch('http://localhost:8000/get_tasks?user_id=user123');
+          const tasks = await response.json();
+          renderTasks(tasks);
+          checkForReminders(tasks);
+     }
+
+     function renderTasks(tasks) {
+          const taskList = document.getElementById('taskList');
+          taskList.innerHTML = '';
+
+          tasks.forEach(task => {
+               const taskCard = document.createElement('div');
+               taskCard.className = 'task-card';
+               taskCard.innerHTML = `
+               <div>
+                   <strong>${task.task}</strong>
+                   <div>⏰ ${task.time}</div>
+               </div>
+               <div class="task-actions">
+                   <div class="radio-group">
+                       <input type="radio" id="upcoming-${task.id}" name="status-${task.id}" value="upcoming" 
+                              ${task.status === 'upcoming' ? 'checked' : ''} onchange="updateStatus(${task.id}, 'upcoming')">
+                       <label for="upcoming-${task.id}">Upcoming</label>
+                       
+                       <input type="radio" id="ongoing-${task.id}" name="status-${task.id}" value="ongoing"
+                              ${task.status === 'ongoing' ? 'checked' : ''} onchange="updateStatus(${task.id}, 'ongoing')">
+                       <label for="ongoing-${task.id}">Ongoing</label>
+                       
+                       <input type="radio" id="done-${task.id}" name="status-${task.id}" value="done"
+                              ${task.status === 'done' ? 'checked' : ''} onchange="updateStatus(${task.id}, 'done')">
+                       <label for="done-${task.id}">Done</label>
+                   </div>
+                   <button onclick="deleteTask(${task.id})">🗑️</button>
+               </div>
+           `;
+               taskList.appendChild(taskCard);
+          });
+     }
+
+     function filterTasks(status) {
+          // Update UI
+          document.querySelectorAll('.status-item').forEach(item => {
+               item.classList.remove('active');
+          });
+          event.target.classList.add('active');
+
+          // Filter logic would go here (or handle in backend)
+          loadTasks(); // Temporary reload
+     }
+
+     async function addTask() {
+          const taskInput = document.getElementById('taskInput');
+          const timeInput = document.getElementById('timeInput');
+
+          if (!taskInput.value || !timeInput.value) {
+               alert("Please fill both task and time!");
+               return;
+          }
+
+          try {
+               const response = await fetch('http://localhost:8000/add_task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                         user_id: "user123",
+                         task: taskInput.value,
+                         time: timeInput.value,
+                         status: "upcoming"
+                    })
+               });
+
+               if (response.ok) {
+                    // Clear inputs
+                    taskInput.value = '';
+                    timeInput.value = '';
+
+                    // Refresh task list
+                    await loadTasks();
+               } else {
+                    alert("Failed to add task!");
+               }
+          } catch (error) {
+               console.error("Error:", error);
+               alert("Connection error!");
+          }
+     }
+
+     async function updateStatus(taskId, status) {
+          await fetch(`http://localhost:8000/update_task`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                    task_id: taskId,
+                    status: status
+               })
+          });
+
+          if (status === 'ongoing') {
+               showNotification("Task Started", "You've started a task!");
+          }
+     }
+
+     async function deleteTask(taskId) {
+          await fetch(`http://localhost:8000/delete_task`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                    task_id: taskId
+               })
+          });
+          loadTasks();
+     }
+
+     function showNotification(title, message) {
+          if (Notification.permission === "granted") {
+               new Notification(title, { body: message });
+          }
+     }
+
+     function checkForReminders(tasks) {
+          const now = new Date();
+          const currentTime = now.getHours().toString().padStart(2, '0') + ':' +
+               now.getMinutes().toString().padStart(2, '0');
+
+          tasks.forEach(task => {
+               if (task.time === currentTime && task.status === 'upcoming') {
+                    showNotification("⏰ Reminder", task.task);
+                    // Auto-update to ongoing
+                    updateStatus(task.id, 'ongoing');
+               }
+          });
+
+          // Check every minute
+          setTimeout(() => loadTasks(), 60000);
+     }
+</script>
+</body>
+
+</html>
