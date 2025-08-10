@@ -20,7 +20,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or specify your frontend origin
+    allow_origins=["*"], # Or specify your frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,7 +110,7 @@ def check_reminders(user_id: str):
         cursor.execute("UPDATE tasks SET status='ongoing' WHERE id=?", (tasks[0][0],))
         conn.commit()
         
-        # Get random content to include with reminder
+        # Get random content 
         cursor.execute("SELECT content FROM educational_content WHERE is_active=1 ORDER BY RANDOM() LIMIT 1")
         extra_content = cursor.fetchone()
         
